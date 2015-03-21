@@ -4,12 +4,13 @@ import java.util.concurrent.TimeUnit;
 import rx.Observable;
 import rx.Observable.OnSubscribe;
 import rx.Subscriber;
+import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
 public class HelloWorld {
 
     public static void main(String[] args) {
-
+/*
         // Hello World
         Observable.create(subscriber -> {
             subscriber.onNext("Hello World!");
@@ -20,11 +21,75 @@ public class HelloWorld {
         Observable.just("Hello", "World!")
                 .subscribe(System.out::println);
 
+
+        Observable.create(subscriber -> {
+            subscriber.onNext("hola");
+            subscriber.onCompleted();
+        }).subscribe(System.out::println);
+
+        Observable.just("hi", "friend").subscribe(System.out::println);
+
+        Observable.just("hi friend")
+                .subscribe(System.out::println,
+                        Throwable::printStackTrace,
+                        () -> System.out.println("Done"));
+
         // add onError and onComplete listeners
         Observable.just("Hello World!")
                 .subscribe(System.out::println,
                         Throwable::printStackTrace,
                         () -> System.out.println("Done"));
+
+
+        Observable.create(new OnSubscribe<String>() {
+            @Override
+            public void call(Subscriber<? super String> subscriber) {
+                subscriber.onNext("hi friend.");
+                subscriber.onCompleted();
+            }
+        }).subscribe(new Subscriber<String>() {
+            @Override
+            public void onNext(String s) {
+                System.out.println(s);
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                e.printStackTrace();
+            }
+
+            @Override
+            public void onCompleted() {
+                System.out.println("Done. Done.");
+            }
+        });
+
+        Observable.create(new OnSubscribe<String>() {
+            @Override
+            public void call(Subscriber<? super String> subscriber) {
+                try {
+                    subscriber.onNext("hi friend.");
+                    subscriber.onCompleted();
+                } catch(Throwable e) {
+                    subscriber.onError(e);
+                }
+            }
+        }).subscribe(new Subscriber<String>() {
+            @Override
+            public void onNext(String s) {
+                System.out.println(s);
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                e.printStackTrace();
+            }
+
+            @Override
+            public void onCompleted() {
+                System.out.println("Done. Done.");
+            }
+        });
 
         // expand to show full classes
         Observable.create(new OnSubscribe<String>() {
@@ -64,6 +129,13 @@ public class HelloWorld {
             }
         }).subscribe(System.out::println);
 
+        Observable.create(subscriber -> {
+            new Thread(() -> {
+                subscriber.onNext(getData());
+                subscriber.onCompleted();
+            }).start();
+        }).subscribe(System.out::println);
+
         // add concurrency (manually)
         Observable.create(subscriber -> {
             new Thread(() -> {
@@ -76,6 +148,12 @@ public class HelloWorld {
             }).start();
         }).subscribe(System.out::println);
 
+        Observable.create(subscriber -> {
+            subscriber.onNext(getData());
+            subscriber.onCompleted();
+        }).subscribeOn(Schedulers.io())
+                .subscribe(System.out::println);
+
         // add concurrency (using a Scheduler)
         Observable.create(subscriber -> {
             try {
@@ -85,6 +163,25 @@ public class HelloWorld {
                 subscriber.onError(e);
             }
         }).subscribeOn(Schedulers.io())
+                .subscribe(System.out::println);
+
+        // add concurrency (using a Scheduler)
+        Observable.create(subscriber -> {
+            try {
+                subscriber.onNext(getData());
+                subscriber.onCompleted();
+            } catch (Exception e) {
+                subscriber.onError(e);
+            }
+        }).map(o -> {
+            System.out.println("Current Thread: " + Thread.currentThread().getName());
+            return o;
+        }).subscribeOn(Schedulers.io())
+                .map(data ->
+                {
+                    System.out.println("Current Thread: " + Thread.currentThread().getName());
+                    return data + " --> at " + System.currentTimeMillis();
+                })
                 .subscribe(System.out::println);
 
         // add operator
@@ -99,6 +196,19 @@ public class HelloWorld {
                 .map(data -> data + " --> at " + System.currentTimeMillis())
                 .subscribe(System.out::println);
 
+        // add operator
+        Observable.create(subscriber -> {
+            try {
+                subscriber.onNext(getData());
+                subscriber.onCompleted();
+            } catch (Exception e) {
+                subscriber.onError(e);
+            }
+        }).subscribeOn(Schedulers.io())
+                .map(data -> data + " --> at " + System.currentTimeMillis())
+                .onErrorResumeNext(e -> Observable.just("Fallback Data"))
+                .subscribe(System.out::println);
+
         // add error handling
         Observable.create(subscriber -> {
             try {
@@ -111,6 +221,14 @@ public class HelloWorld {
                 .map(data -> data + " --> at " + System.currentTimeMillis())
                 .onErrorResumeNext(e -> Observable.just("Fallback Data"))
                 .subscribe(System.out::println);
+
+        Observable.create(subscriber -> {
+            int i = 0;
+            while (!subscriber.isUnsubscribed()) {
+                subscriber.onNext(i++);
+                System.out.println("emitted " + i);
+            }
+        }).take(10).subscribe(System.out::println);
 
         // infinite
         Observable.create(subscriber -> {
@@ -128,8 +246,13 @@ public class HelloWorld {
         }).subscribe(System.out::println);
 
         Observable.create(subscriber -> {
-            throw new RuntimeException("failed!");
-        }).onErrorResumeNext(Observable.just("fallback value"))
+            int i = 0;
+            while (!subscriber.isUnsubscribed()) {
+                    subscriber.onNext(i++);
+                if (i > 6)
+                    throw new RuntimeException("failed!");
+            }
+        }).take(10).onErrorReturn(throwable -> "fallback value")
                 .subscribe(System.out::println);
 
         Observable.create(subscriber -> {
@@ -138,10 +261,18 @@ public class HelloWorld {
             return "fallback value";
         }).subscribe(System.out::println);
 
+*/
+
+/*
+*/
+
         Observable.create(subscriber -> {
             throw new RuntimeException("failed!");
         }).retryWhen(attempts -> {
-            return attempts.zipWith(Observable.range(1, 3), (throwable, i) -> i)
+            return attempts.zipWith(Observable.range(1, 3), (throwable, i) -> {
+                throwable.printStackTrace();
+                return i;
+            })
                     .flatMap(i -> {
                         System.out.println("delay retry by " + i + " second(s)");
                         return Observable.timer(i, TimeUnit.SECONDS);
@@ -154,6 +285,7 @@ public class HelloWorld {
         } catch (InterruptedException e1) {
             e1.printStackTrace();
         }
+
     }
 
     private static String getData() {
